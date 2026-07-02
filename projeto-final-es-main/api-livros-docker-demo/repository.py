@@ -38,9 +38,6 @@ class RepositorioLivros(ABC):
     def remover(self, livro_id: int) -> bool:
         ...
 
-    @abstractmethod
-    def buscar_por_isbn(self, isbn: str) -> Livro | None:
-        ...
 
 class RepositorioEmMemoria(RepositorioLivros):
     """
@@ -91,12 +88,3 @@ class RepositorioEmMemoria(RepositorioLivros):
             return False
         del self._livros[livro_id]
         return True
-
-    def buscar_por_isbn(self, isbn: str) -> Livro | None:
-        for livro in self._livros.values():
-            if livro.isbn == isbn:
-                return livro
-        
-        
-        return None
-        
