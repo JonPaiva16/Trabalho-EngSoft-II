@@ -1,0 +1,55 @@
+name: Deploy AWS Academy
+
+# Dispara manualmente (Actions -> Deploy AWS Academy -> Run workflow) ou
+# automaticamente apos o merge na main. NAO altera o infra.yml: apenas
+# repassa os parametros necessarios para ele.
+on:
+  workflow_dispatch:
+  push:
+    branches: [main]
+    paths:
+      - "projeto-final-es-main/**"
+
+jobs:
+  deploy:
+    runs-on: ubuntu-latest
+    permissions:
+      contents: read
+
+    steps:
+      - name: Checkout do codigo
+        uses: actions/checkout@v4
+
+      - name: Configurar credenciais AWS (AWS Academy Learner Lab)
+        uses: aws-actions/configure-aws-credentials@v4
+        with:
+          aws-access-key-id: ${{ secrets.AWS_ACCESS_KEY_ID }}
+          aws-secret-access-key: ${{ secrets.AWS_SECRET_ACCESS_KEY }}
+          aws-session-token: ${{ secrets.AWS_SESSION_TOKEN }}
+          aws-region: us-east-1
+
+      - name: Descobrir VPC default da conta
+        id: vpc
+        run: |
+          VPC_ID=$(aws ec2 describe-vpcs \
+            --filters Name=isDefault,Values=true \
+            --query "Vpcs[0].VpcId" --output text)
+          echo "vpc_id=$VPC_ID" >> "$GITHUB_OUTPUT"
+
+      - name: Deploy da stack CloudFormation (infra.yml)
+        run: |
+          aws cloudformation deploy \
+            --stack-name catalogo-livros \
+            --template-file projeto-final-es-main/infra.yml \
+            --parameter-overrides \
+              VpcId=${{ steps.vpc.outputs.vpc_id }} \
+              RepoUrl=https://github.com/${{ github.repository }}.git \
+              RepoSubdir=projeto-final-es-main \
+            --capabilities CAPABILITY_NAMED_IAM \
+            --no-fail-on-empty-changeset
+
+      - name: Mostrar URL da API no ar
+        run: |
+          aws cloudformation describe-stacks \
+            --stack-name catalogo-livros \
+            --query "Stacks[0].Outputs" --output table

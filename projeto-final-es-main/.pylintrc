@@ -1,0 +1,13 @@
+[MASTER]
+ignore=api-livros-docker-demo,tests
+
+[MESSAGES CONTROL]
+# missing-module-docstring/too-few-public-methods geram ruido em projetos
+# pequenos de FastAPI; mantemos as regras que importam de verdade.
+disable=
+    missing-module-docstring,
+    too-few-public-methods,
+    duplicate-code
+
+[FORMAT]
+max-line-length=100
