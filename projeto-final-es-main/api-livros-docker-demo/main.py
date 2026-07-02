@@ -14,35 +14,14 @@ Documentacao interativa: http://localhost:8000/docs
 """
 
 from fastapi import FastAPI, HTTPException, status
-import httpx
-from datetime import datetime
-
 
 from models import Livro, LivroCriar, LivroAtualizar
 from repository import RepositorioEmMemoria, RepositorioLivros
 
+
 # ----------------------------------------------------------------------
 # Camada de servico (regras de negocio)
 # ----------------------------------------------------------------------
-
-
-def consultar_open_library(isbn: str):
-    url = (
-        f"https://openlibrary.org/api/books"
-        f"?bibkeys=ISBN:{isbn}&format=json&jscmd=data"
-    )
-
-    resposta = httpx.get(url)
-
-    if resposta.status_code != 200:
-        return None
-
-    dados = resposta.json()
-
-    chave = f"ISBN:{isbn}"
-
-    return dados.get(chave)
-
 
 class ServicoLivros:
     """
@@ -60,31 +39,6 @@ class ServicoLivros:
         return self._repo.buscar_por_id(livro_id)
 
     def criar(self, dados: LivroCriar) -> Livro:
-
-        # Verifica ISBN duplicado
-        if self._repo.buscar_por_isbn(dados.isbn):
-            raise HTTPException(
-                status_code=status.HTTP_409_CONFLICT,
-                detail="Já existe um livro com esse ISBN.",
-            )
-
-        # Valida o ano
-        if dados.ano > datetime.now().year:
-            raise HTTPException(
-                status_code=status.HTTP_400_BAD_REQUEST,
-                detail="Ano de publicação inválido.",
-            )
-
-        # Valida o ISBN na Open Library
-        livro_api = consultar_open_library(dados.isbn)
-
-        if livro_api is None:
-            raise HTTPException(
-                status_code=status.HTTP_404_NOT_FOUND,
-                detail="ISBN não encontrado na Open Library.",
-            )
-
-        # Salva o livro
         return self._repo.adicionar(dados)
 
     def atualizar(self, livro_id: int, dados: LivroAtualizar) -> Livro | None:
@@ -108,7 +62,6 @@ servico = ServicoLivros(RepositorioEmMemoria())
 # ----------------------------------------------------------------------
 # Rotas (camada de API)
 # ----------------------------------------------------------------------
-
 
 @app.get("/livros", response_model=list[Livro])
 def listar_livros():
